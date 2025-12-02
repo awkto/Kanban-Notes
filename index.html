@@ -942,7 +942,14 @@ function importNotes() {
     const sections = normalizedMarkdown.split(/\n---\n/);
 
     sections.forEach(section => {
-      const lines = section.trim().split('\n');
+      const trimmedSection = section.trim();
+
+      // Skip empty sections (like trailing --- with nothing after)
+      if (!trimmedSection) {
+        return;
+      }
+
+      const lines = trimmedSection.split('\n');
       let title = 'Untitled';
       const items = [];
       let currentItem = '';
@@ -979,7 +986,7 @@ function importNotes() {
         items.push(currentItem.trim());
       }
 
-      // Create column with parsed data
+      // Create column with parsed data (only if we have a title or items)
       if (title || items.length > 0) {
         createColumn(title, items);
       }
