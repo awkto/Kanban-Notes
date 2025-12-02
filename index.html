@@ -48,6 +48,112 @@
     box-shadow: 0 6px 20px rgba(0,0,0,0.3);
   }
 
+  .import-export-btn {
+    padding: 10px 20px;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 2px solid white;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    margin: 0 5px;
+    transition: all 0.3s ease;
+  }
+
+  .import-export-btn:hover {
+    background: white;
+    color: #667eea;
+  }
+
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    animation: fadeIn 0.3s ease;
+  }
+
+  .modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s ease;
+  }
+
+  .modal-content h2 {
+    margin-top: 0;
+    color: #667eea;
+  }
+
+  .modal-content textarea {
+    width: 100%;
+    height: 300px;
+    padding: 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    resize: vertical;
+    outline: none;
+  }
+
+  .modal-content textarea:focus {
+    border-color: #667eea;
+  }
+
+  .modal-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: flex-end;
+  }
+
+  .modal-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s ease;
+  }
+
+  .modal-btn.primary {
+    background: #667eea;
+    color: white;
+  }
+
+  .modal-btn.primary:hover {
+    background: #5568d3;
+  }
+
+  .modal-btn.secondary {
+    background: #e0e0e0;
+    color: #666;
+  }
+
+  .modal-btn.secondary:hover {
+    background: #d0d0d0;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
   .container {
     display: flex;
     gap: 20px;
@@ -129,15 +235,14 @@
   }
 
   .delete-column {
-    background: #ff4757;
-    color: white;
+    background: transparent;
+    color: #999;
     border: none;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
+    width: 20px;
+    height: 20px;
     cursor: pointer;
     font-size: 18px;
-    font-weight: bold;
+    font-weight: normal;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
@@ -145,8 +250,7 @@
   }
 
   .delete-column:hover {
-    background: #ee5a6f;
-    transform: rotate(90deg);
+    color: #666;
   }
 
   ul {
@@ -225,15 +329,14 @@
   .delete-item {
     position: absolute;
     right: 8px;
-    background: #ff4757;
-    color: white;
+    background: transparent;
+    color: #999;
     border: none;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
+    font-size: 16px;
+    font-weight: normal;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
@@ -246,8 +349,7 @@
   }
 
   .delete-item:hover {
-    background: #ee5a6f;
-    transform: scale(1.1);
+    color: #666;
   }
 
   .add-item-container {
@@ -307,10 +409,49 @@
 <h1>Kanban Notes</h1>
 
 <div class="controls">
+  <button class="import-export-btn" onclick="showImportModal()">Import</button>
   <button class="add-column-btn" onclick="addColumn()">+ Add Column</button>
+  <button class="import-export-btn" onclick="showExportModal()">Export</button>
 </div>
 
 <div class="container" id="container">
+</div>
+
+<!-- Import Modal -->
+<div id="importModal" class="modal" onclick="closeModalOnBackdrop(event, 'importModal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2>Import Notes</h2>
+    <p>Paste your markdown content below:</p>
+    <textarea id="importTextarea" placeholder="## Column Name
+
+Item 1
+
+Item 2
+
+---
+
+## Another Column
+
+Item 3"></textarea>
+    <div class="modal-buttons">
+      <button class="modal-btn secondary" onclick="closeModal('importModal')">Cancel</button>
+      <button class="modal-btn primary" onclick="importNotes()">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div id="exportModal" class="modal" onclick="closeModalOnBackdrop(event, 'exportModal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2>Export Notes</h2>
+    <p>Copy the markdown below or download it:</p>
+    <textarea id="exportTextarea" readonly></textarea>
+    <div class="modal-buttons">
+      <button class="modal-btn secondary" onclick="downloadMarkdown()">Download</button>
+      <button class="modal-btn primary" onclick="copyToClipboard()">Copy to Clipboard</button>
+      <button class="modal-btn secondary" onclick="closeModal('exportModal')">Close</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -725,6 +866,125 @@ function addColumn() {
     sel.removeAllRanges();
     sel.addRange(range);
   }, 100);
+}
+
+// ===== IMPORT/EXPORT FUNCTIONS =====
+function showImportModal() {
+  document.getElementById('importModal').classList.add('show');
+  document.getElementById('importTextarea').value = '';
+  document.getElementById('importTextarea').focus();
+}
+
+function showExportModal() {
+  const markdown = exportToMarkdown();
+  document.getElementById('exportTextarea').value = markdown;
+  document.getElementById('exportModal').classList.add('show');
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).classList.remove('show');
+}
+
+function closeModalOnBackdrop(event, modalId) {
+  if (event.target.id === modalId) {
+    closeModal(modalId);
+  }
+}
+
+function exportToMarkdown() {
+  const columns = document.querySelectorAll('.category');
+  let markdown = '';
+
+  columns.forEach((col, index) => {
+    const title = col.querySelector('h3').textContent;
+    const items = col.querySelectorAll('li .item-text');
+
+    markdown += `## ${title}\n\n`;
+
+    items.forEach(item => {
+      markdown += `${item.textContent}\n\n`;
+    });
+
+    // Add separator between columns (but not after the last one)
+    if (index < columns.length - 1) {
+      markdown += '---\n\n';
+    }
+  });
+
+  return markdown.trim();
+}
+
+function importNotes() {
+  const markdown = document.getElementById('importTextarea').value.trim();
+
+  if (!markdown) {
+    alert('Please paste some markdown content first.');
+    return;
+  }
+
+  try {
+    // Clear existing columns
+    document.getElementById('container').innerHTML = '';
+    columnCounter = 0;
+
+    // Parse markdown
+    const sections = markdown.split(/\n---\n/);
+
+    sections.forEach(section => {
+      const lines = section.trim().split('\n');
+      let title = 'Untitled';
+      const items = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        // Check for H2 heading
+        if (line.startsWith('## ')) {
+          title = line.substring(3).trim();
+        } else if (line && !line.startsWith('#')) {
+          // Non-empty line that's not a heading is an item
+          items.push(line);
+        }
+      }
+
+      // Create column with parsed data
+      if (title || items.length > 0) {
+        createColumn(title, items);
+      }
+    });
+
+    closeModal('importModal');
+  } catch (error) {
+    alert('Error parsing markdown. Please check the format.');
+    console.error(error);
+  }
+}
+
+function copyToClipboard() {
+  const textarea = document.getElementById('exportTextarea');
+  textarea.select();
+  document.execCommand('copy');
+
+  // Visual feedback
+  const btn = event.target;
+  const originalText = btn.textContent;
+  btn.textContent = 'Copied!';
+  setTimeout(() => {
+    btn.textContent = originalText;
+  }, 2000);
+}
+
+function downloadMarkdown() {
+  const markdown = document.getElementById('exportTextarea').value;
+  const blob = new Blob([markdown], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'notes.active.md';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 </script>
 
