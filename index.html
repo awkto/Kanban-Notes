@@ -931,24 +931,52 @@ function importNotes() {
     document.getElementById('container').innerHTML = '';
     columnCounter = 0;
 
-    // Parse markdown
-    const sections = markdown.split(/\n---\n/);
+    // Normalize the markdown format
+    // Replace <br> tags with empty lines
+    let normalizedMarkdown = markdown.replace(/<br>/gi, '\n');
+
+    // Replace escaped separators \--- with ---
+    normalizedMarkdown = normalizedMarkdown.replace(/\\---/g, '---');
+
+    // Parse markdown - split on --- surrounded by newlines
+    const sections = normalizedMarkdown.split(/\n---\n/);
 
     sections.forEach(section => {
       const lines = section.trim().split('\n');
       let title = 'Untitled';
       const items = [];
+      let currentItem = '';
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
 
         // Check for H2 heading
         if (line.startsWith('## ')) {
+          // Save any accumulated item
+          if (currentItem) {
+            items.push(currentItem.trim());
+            currentItem = '';
+          }
           title = line.substring(3).trim();
         } else if (line && !line.startsWith('#')) {
-          // Non-empty line that's not a heading is an item
-          items.push(line);
+          // Non-empty line that's not a heading
+          if (currentItem) {
+            // Add to existing item with a space
+            currentItem += ' ' + line;
+          } else {
+            // Start new item
+            currentItem = line;
+          }
+        } else if (!line && currentItem) {
+          // Empty line marks end of current item
+          items.push(currentItem.trim());
+          currentItem = '';
         }
+      }
+
+      // Don't forget the last item
+      if (currentItem) {
+        items.push(currentItem.trim());
       }
 
       // Create column with parsed data
