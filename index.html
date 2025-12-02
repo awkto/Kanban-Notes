@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kanban Notes</title>
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+  }
+
+  h1 {
+    text-align: center;
+    color: white;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  }
+
+  .controls {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .add-column-btn {
+    padding: 12px 30px;
+    background: white;
+    color: #667eea;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+  }
+
+  .add-column-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  }
+
+  .container {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    overflow-x: auto;
+    align-items: flex-start;
+  }
+
+  .category {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    width: 320px;
+    min-width: 320px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    transition: opacity 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: grab;
+    position: relative;
+  }
+
+  .category:active {
+    cursor: grabbing;
+  }
+
+  .category.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+    transition: none;
+  }
+
+  .category.drag-over {
+    transform: scale(1.02);
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
+  }
+
+  .container.dragging-column .category:not(.dragging) {
+    transition: none;
+  }
+
+  .category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #667eea;
+  }
+
+  .drag-handle {
+    cursor: grab;
+    font-size: 20px;
+    color: #999;
+    user-select: none;
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .category h3 {
+    flex: 1;
+    margin: 0;
+    padding: 5px 10px;
+    color: #667eea;
+    font-size: 1.3em;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    transition: all 0.2s ease;
+    outline: none;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .category h3.edit-mode {
+    border-color: #667eea;
+    background: #f8f9ff;
+    cursor: text;
+    user-select: text;
+  }
+
+  .delete-column {
+    background: #ff4757;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .delete-column:hover {
+    background: #ee5a6f;
+    transform: rotate(90deg);
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 15px 0;
+    min-height: 100px;
+    transition: all 0.3s ease;
+  }
+
+  ul.drag-over {
+    background: #f8f9ff;
+    border-radius: 8px;
+  }
+
+  li {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    margin: 10px 0;
+    padding: 12px 40px 12px 15px;
+    border-radius: 8px;
+    cursor: grab;
+    position: relative;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+  }
+
+  li:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  li:active {
+    cursor: grabbing;
+  }
+
+  li.dragging {
+    opacity: 0.3;
+    transform: scale(0.95);
+  }
+
+  li.drag-over {
+    border-top: 3px solid #667eea;
+    margin-top: 15px;
+  }
+
+  li.editing {
+    cursor: text;
+  }
+
+  li.editing:hover {
+    transform: none;
+  }
+
+  .item-text {
+    flex: 1;
+    padding: 5px;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    outline: none;
+    background: transparent;
+    transition: all 0.2s ease;
+    word-wrap: break-word;
+    cursor: grab;
+    user-select: none;
+  }
+
+  .item-text.edit-mode {
+    background: white;
+    border-color: #667eea;
+    cursor: text;
+    user-select: text;
+  }
+
+  .delete-item {
+    position: absolute;
+    right: 8px;
+    background: #ff4757;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+  }
+
+  li:hover .delete-item {
+    opacity: 1;
+  }
+
+  .delete-item:hover {
+    background: #ee5a6f;
+    transform: scale(1.1);
+  }
+
+  .add-item-container {
+    display: flex;
+    gap: 8px;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    padding: 10px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+
+  input[type="text"]:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .add-btn {
+    padding: 10px 20px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s ease;
+  }
+
+  .add-btn:hover {
+    background: #5568d3;
+    transform: scale(1.05);
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .category, li {
+    animation: slideIn 0.3s ease;
+  }
+</style>
+</head>
+<body>
+
+<h1>Kanban Notes</h1>
+
+<div class="controls">
+  <button class="add-column-btn" onclick="addColumn()">+ Add Column</button>
+</div>
+
+<div class="container" id="container">
+</div>
+
+<script>
+let draggedItem = null;
+let draggedColumn = null;
+let columnCounter = 0;
+let lastColumnMove = 0;
+
+// Initialize with default columns
+window.onload = function() {
+  const defaultColumns = [
+    {
+      title: 'To Do',
+      items: [
+        'Design new landing page',
+        'Review pull requests',
+        'Update documentation',
+        'Schedule team meeting',
+        'Research competitor features'
+      ]
+    },
+    {
+      title: 'In Progress',
+      items: [
+        'Implement user authentication',
+        'Fix responsive layout issues',
+        'Write unit tests for API endpoints'
+      ]
+    },
+    {
+      title: 'Done',
+      items: [
+        'Set up development environment',
+        'Create project roadmap',
+        'Deploy staging server'
+      ]
+    }
+  ];
+
+  defaultColumns.forEach(col => createColumn(col.title, col.items));
+
+  // Setup container drag event
+  const container = document.getElementById('container');
+  container.addEventListener('dragover', handleContainerDragOver);
+};
+
+// ===== COLUMN DRAG & DROP =====
+function handleColumnDragStart(e) {
+  draggedColumn = e.currentTarget;
+  draggedColumn.classList.add('dragging');
+  document.getElementById('container').classList.add('dragging-column');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
+}
+
+function handleColumnDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.getElementById('container').classList.remove('dragging-column');
+  draggedColumn = null;
+  lastColumnMove = 0;
+}
+
+function handleContainerDragOver(e) {
+  // Only handle column dragging, not item dragging
+  if (draggedItem) return;
+
+  if (e.preventDefault) {
+    e.preventDefault();
+  }
+
+  if (!draggedColumn) return false;
+
+  e.dataTransfer.dropEffect = 'move';
+
+  // Throttle to reduce flickering
+  const now = Date.now();
+  if (now - lastColumnMove < 50) {
+    return false;
+  }
+  lastColumnMove = now;
+
+  const afterElement = getDragAfterElement(e.currentTarget, e.clientX);
+  const nextSibling = draggedColumn.nextSibling;
+
+  // Only move if position actually changes
+  if (afterElement !== nextSibling) {
+    if (afterElement == null) {
+      e.currentTarget.appendChild(draggedColumn);
+    } else {
+      e.currentTarget.insertBefore(draggedColumn, afterElement);
+    }
+  }
+
+  return false;
+}
+
+function getDragAfterElement(container, x) {
+  const draggableElements = [...container.querySelectorAll('.category:not(.dragging)')];
+
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = x - box.left - box.width / 2;
+
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// ===== ITEM DRAG & DROP =====
+function handleItemDragStart(e) {
+  draggedItem = e.currentTarget;
+  draggedItem.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.stopPropagation(); // Prevent column drag events
+
+  // Disable column dragging while dragging items
+  const columns = document.querySelectorAll('.category');
+  columns.forEach(col => col.draggable = false);
+}
+
+function handleItemDragOver(e) {
+  if (e.preventDefault) {
+    e.preventDefault();
+  }
+
+  e.stopPropagation(); // Prevent column drag events
+
+  if (!draggedItem) return false;
+
+  e.dataTransfer.dropEffect = 'move';
+
+  const target = e.target.closest('li');
+  if (target && target !== draggedItem) {
+    const ul = target.parentElement;
+    const targetRect = target.getBoundingClientRect();
+    const offset = e.clientY - targetRect.top;
+
+    if (offset > targetRect.height / 2) {
+      ul.insertBefore(draggedItem, target.nextSibling);
+    } else {
+      ul.insertBefore(draggedItem, target);
+    }
+  }
+
+  return false;
+}
+
+function handleItemDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+
+  // Re-enable column dragging
+  const columns = document.querySelectorAll('.category');
+  columns.forEach(col => col.draggable = true);
+
+  draggedItem = null;
+}
+
+function handleUlDragOver(e) {
+  if (e.preventDefault) {
+    e.preventDefault();
+  }
+
+  e.stopPropagation(); // Prevent column drag events
+
+  const ul = e.currentTarget;
+  if (draggedItem && !ul.contains(draggedItem)) {
+    ul.appendChild(draggedItem);
+  }
+
+  return false;
+}
+
+// ===== CREATE COLUMN =====
+function createColumn(title = 'New Column', items = []) {
+  const colId = 'col' + columnCounter++;
+  const container = document.getElementById('container');
+
+  const category = document.createElement('div');
+  category.className = 'category';
+  category.draggable = true;
+
+  // Column drag events
+  category.addEventListener('dragstart', handleColumnDragStart);
+  category.addEventListener('dragend', handleColumnDragEnd);
+
+  // Create header container
+  const header = document.createElement('div');
+  header.className = 'category-header';
+
+  // Drag handle
+  const dragHandle = document.createElement('span');
+  dragHandle.className = 'drag-handle';
+  dragHandle.textContent = '☰';
+  dragHandle.title = 'Drag to reorder';
+
+  // Title (initially NOT editable)
+  const h3 = document.createElement('h3');
+  h3.contentEditable = false;
+  h3.textContent = title;
+
+  // Click to enter edit mode
+  h3.addEventListener('click', function(e) {
+    if (!h3.classList.contains('edit-mode')) {
+      enterTitleEditMode(h3, category);
+    }
+  });
+
+  // Handle edit mode
+  h3.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      exitTitleEditMode(h3, category);
+    }
+    if (e.key === 'Escape') {
+      exitTitleEditMode(h3, category);
+    }
+  });
+
+  h3.addEventListener('blur', function() {
+    exitTitleEditMode(h3, category);
+  });
+
+  // Delete button
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete-column';
+  deleteBtn.textContent = '×';
+  deleteBtn.title = 'Delete column';
+  deleteBtn.onclick = function(e) {
+    e.stopPropagation();
+    if (confirm('Delete this column?')) {
+      category.remove();
+    }
+  };
+
+  header.appendChild(dragHandle);
+  header.appendChild(h3);
+  header.appendChild(deleteBtn);
+
+  // Create list
+  const ul = document.createElement('ul');
+  ul.id = colId;
+  ul.addEventListener('dragover', handleUlDragOver);
+
+  items.forEach(itemText => {
+    const li = createListItem(itemText);
+    ul.appendChild(li);
+  });
+
+  // Create input container
+  const inputContainer = document.createElement('div');
+  inputContainer.className = 'add-item-container';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.id = colId + 'Input';
+  input.placeholder = 'Add new item...';
+  input.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      addItem(colId);
+    }
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-btn';
+  addBtn.textContent = '+';
+  addBtn.onclick = function() {
+    addItem(colId);
+  };
+
+  inputContainer.appendChild(input);
+  inputContainer.appendChild(addBtn);
+
+  category.appendChild(header);
+  category.appendChild(ul);
+  category.appendChild(inputContainer);
+
+  container.appendChild(category);
+}
+
+// ===== CREATE LIST ITEM =====
+function createListItem(text) {
+  const li = document.createElement('li');
+  li.draggable = true;
+
+  // Item drag events
+  li.addEventListener('dragstart', handleItemDragStart);
+  li.addEventListener('dragover', handleItemDragOver);
+  li.addEventListener('dragend', handleItemDragEnd);
+
+  // Text content (initially NOT editable)
+  const textDiv = document.createElement('div');
+  textDiv.className = 'item-text';
+  textDiv.contentEditable = false;
+  textDiv.textContent = text;
+
+  // Click to enter edit mode
+  textDiv.addEventListener('click', function(e) {
+    if (!textDiv.classList.contains('edit-mode')) {
+      enterEditMode(textDiv, li);
+    }
+  });
+
+  // Handle edit mode
+  textDiv.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      exitEditMode(textDiv, li);
+    }
+    if (e.key === 'Escape') {
+      exitEditMode(textDiv, li);
+    }
+  });
+
+  textDiv.addEventListener('blur', function() {
+    exitEditMode(textDiv, li);
+  });
+
+  // Delete button
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete-item';
+  deleteBtn.textContent = '×';
+  deleteBtn.title = 'Delete item';
+  deleteBtn.onclick = function(e) {
+    e.stopPropagation();
+    li.remove();
+  };
+
+  li.appendChild(textDiv);
+  li.appendChild(deleteBtn);
+
+  return li;
+}
+
+function enterEditMode(textDiv, li) {
+  textDiv.contentEditable = true;
+  textDiv.classList.add('edit-mode');
+  li.classList.add('editing');
+  li.draggable = false;
+  textDiv.focus();
+
+  // Select all text
+  const range = document.createRange();
+  range.selectNodeContents(textDiv);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function exitEditMode(textDiv, li) {
+  textDiv.contentEditable = false;
+  textDiv.classList.remove('edit-mode');
+  li.classList.remove('editing');
+  li.draggable = true;
+
+  if (!textDiv.textContent.trim()) {
+    li.remove();
+  }
+}
+
+function enterTitleEditMode(h3, category) {
+  h3.contentEditable = true;
+  h3.classList.add('edit-mode');
+  category.draggable = false;
+  h3.focus();
+
+  // Select all text
+  const range = document.createRange();
+  range.selectNodeContents(h3);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function exitTitleEditMode(h3, category) {
+  h3.contentEditable = false;
+  h3.classList.remove('edit-mode');
+  category.draggable = true;
+
+  if (!h3.textContent.trim()) {
+    h3.textContent = 'Untitled';
+  }
+}
+
+// ===== ADD ITEM =====
+function addItem(category) {
+  const input = document.getElementById(category + 'Input');
+  const text = input.value.trim();
+  if (text) {
+    const li = createListItem(text);
+    document.getElementById(category).appendChild(li);
+    input.value = '';
+    input.focus();
+  }
+}
+
+// ===== ADD COLUMN =====
+function addColumn() {
+  createColumn('New Column', []);
+  // Focus on the new column's title
+  setTimeout(() => {
+    const columns = document.querySelectorAll('.category');
+    const newColumn = columns[columns.length - 1];
+    const h3 = newColumn.querySelector('h3');
+    h3.focus();
+    // Select all text
+    const range = document.createRange();
+    range.selectNodeContents(h3);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }, 100);
+}
+</script>
+
+</body>
+</html>
