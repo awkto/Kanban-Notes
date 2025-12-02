@@ -921,6 +921,12 @@ function importNotes() {
   }
 
   try {
+    // Export current notes before clearing
+    const currentNotes = exportToMarkdown();
+    if (currentNotes) {
+      appendToDeletedNotes(currentNotes);
+    }
+
     // Clear existing columns
     document.getElementById('container').innerHTML = '';
     columnCounter = 0;
@@ -956,6 +962,21 @@ function importNotes() {
     alert('Error parsing markdown. Please check the format.');
     console.error(error);
   }
+}
+
+function appendToDeletedNotes(markdown) {
+  // Create a timestamp
+  const timestamp = new Date().toISOString();
+  const separator = '\n\n===\n\n';
+  const entry = `Deleted on: ${timestamp}\n\n${markdown}${separator}`;
+
+  // In a browser environment, we'll use localStorage to track deletions
+  // since we can't directly write to files
+  const deletedNotes = localStorage.getItem('deletedNotes') || '';
+  localStorage.setItem('deletedNotes', deletedNotes + entry);
+
+  // Log for debugging
+  console.log('Notes archived to deleted notes');
 }
 
 function copyToClipboard() {
